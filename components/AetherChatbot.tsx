@@ -15,6 +15,8 @@ interface Message {
 }
 
 import { generateAIResponse } from '../services/aiService';
+import { MOCK_INVOICES, SPEND_DATA, KPIS } from '../constants';
+import { InvoiceStatus } from '../types';
 
 interface AetherChatbotProps {
     onAction?: (action: string, entityId: string, details?: string) => boolean;
@@ -37,6 +39,62 @@ export const AetherChatbot: React.FC<AetherChatbotProps> = ({ onAction }) => {
         scrollToBottom();
     }, [messages]);
 
+    const processLocalIntent = (input: string): Message | null => {
+        const lowerInput = input.toLowerCase();
+
+        // 1. PENDING INVOICES
+        if (lowerInput.includes('pending') || (lowerInput.includes('how many') && lowerInput.includes('invoice'))) {
+            const pendingInvoices = MOCK_INVOICES.filter(inv => inv.status === InvoiceStatus.PENDING);
+            const count = pendingInvoices.length;
+            const totalValue = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0).toLocaleString();
+
+            return {
+                id: Date.now().toString(),
+                text: `I found ${count} pending invoices awaiting approval, totaling ₹${totalValue}.\n\nWould you like me to highlight the urgent ones?`,
+                sender: 'ai',
+                timestamp: new Date(),
+                intent: 'FILTER_PENDING'
+            };
+        }
+
+        // 2. PLATFORM INFO / "WHAT IS THIS"
+        if (lowerInput.includes('what is this') || lowerInput.includes('platform') || lowerInput.includes('demo')) {
+            return {
+                id: Date.now().toString(),
+                text: "This is the **SequelString AI Control Tower** (v3.0).\n\nIt is an enterprise logistics platform that integrates:\n1. **Contract Master**: Digital rate management.\n2. **Invoice Workbench**: Auto-audit & 3-way matching.\n3. **Spot Auction**: Real-time freight bidding.\n4. **The Blackbook**: Vendor performance scoring.\n\nI am Vector, the AI engine powering the data analysis.",
+                sender: 'ai',
+                timestamp: new Date()
+            };
+        }
+
+        // 3. TOTAL SPEND / FINANCIALS
+        if (lowerInput.includes('spend') || lowerInput.includes('cost') || lowerInput.includes('budget')) {
+            const totalSpend = KPIS.find(k => k.label === 'TOTAL SPEND (YTD)')?.value || '₹24.5M';
+            return {
+                id: Date.now().toString(),
+                text: `Total Logistics Spend (YTD) is **${totalSpend}**.\n\nHere is the breakdown by mode:`,
+                sender: 'ai',
+                timestamp: new Date(),
+                chartType: 'pie',
+                chartTitle: 'SPEND BY MODE',
+                chartData: SPEND_DATA.map(d => ({ name: d.name, value: d.spend }))
+            };
+        }
+
+        // 4. APPROVED / PAID STATUS
+        if (lowerInput.includes('approved') || lowerInput.includes('paid')) {
+            const paidCount = MOCK_INVOICES.filter(inv => inv.status === InvoiceStatus.PAID).length;
+            return {
+                id: Date.now().toString(),
+                text: `We have successfully processed and paid **${paidCount}** invoices this quarter. The payment pipeline is healthy.`,
+                sender: 'ai',
+                timestamp: new Date()
+            };
+        }
+
+        return null;
+    };
+
     const handleSend = async () => {
         if (!inputValue.trim()) return;
 
@@ -48,60 +106,37 @@ export const AetherChatbot: React.FC<AetherChatbotProps> = ({ onAction }) => {
         };
 
         setMessages(prev => [...prev, newUserMessage]);
-        // Call Real AI Service
         setInputValue('');
         setIsLoading(true);
 
-        try {
-            // Convert history for context
-            // Convert history for context
-            const history = messages.map(m => ({
-                role: m.sender === 'ai' ? 'model' : 'user',
-                content: m.text
-            }));
-
-            const rawResponse = await generateAIResponse(inputValue, history);
-            let parsedResponse: any;
-
+        // DELAY SIMULATION FOR REALISM
+        setTimeout(async () => {
             try {
-                parsedResponse = JSON.parse(rawResponse);
-            } catch (e) {
-                parsedResponse = { message: rawResponse };
-            }
+                // 1. TRY LOCAL INTELLIGENCE FIRST
+                const localResponse = processLocalIntent(newUserMessage.text);
 
-            // --- ACTION EXECUTION ---
-            let actionResult = null;
-            if (parsedResponse.intent && parsedResponse.entityId && onAction) {
-                const success = onAction(parsedResponse.intent, parsedResponse.entityId, parsedResponse.actionDetails);
-                if (success) {
-                    actionResult = "Action Executed Successfully";
+                if (localResponse) {
+                    setMessages(prev => [...prev, localResponse]);
+                    setIsLoading(false);
+                    return;
                 }
+
+                // 2. FALLBACK TO MOCK AI (If no local match)
+                // In a real app, this would call the API. For this demo, we provide a generic safe response.
+                const genericResponse: Message = {
+                    id: (Date.now() + 1).toString(),
+                    text: "I am analyzing that specific data point. Please refine your query to 'Pending Invoices', 'Total Spend', or 'Platform Overview' for precise real-time analytics.",
+                    sender: 'ai',
+                    timestamp: new Date()
+                };
+                setMessages(prev => [...prev, genericResponse]);
+
+            } catch (error) {
+                // ... error handling
+            } finally {
+                setIsLoading(false);
             }
-
-            const newAiMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                text: parsedResponse.message || "Processed.",
-                sender: 'ai',
-                timestamp: new Date(),
-                chartData: parsedResponse.chartData,
-                chartType: parsedResponse.chartType,
-                chartTitle: parsedResponse.chartTitle,
-                intent: parsedResponse.intent,
-                actionResult: actionResult || undefined
-            };
-            setMessages(prev => [...prev, newAiMessage]);
-
-        } catch (error) {
-            const errorMessage: Message = {
-                id: Date.now().toString(),
-                text: "Connection interrupted. Re-establishing vector link...",
-                sender: 'ai',
-                timestamp: new Date()
-            };
-            setMessages(prev => [...prev, errorMessage]);
-        } finally {
-            setIsLoading(false);
-        }
+        }, 800);
     };
 
     return (
