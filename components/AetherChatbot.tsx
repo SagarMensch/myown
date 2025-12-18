@@ -135,6 +135,29 @@ export const AetherChatbot: React.FC<AetherChatbotProps> = ({ onAction }) => {
             };
         }
 
+        // 7. SHOW GRAPH / PLOT
+        if (lowerInput.includes('graph') || lowerInput.includes('chart') || lowerInput.includes('plot')) {
+            // Mock Trend Data
+            const trendData = [
+                { name: 'JAN', value: 45000 },
+                { name: 'FEB', value: 52000 },
+                { name: 'MAR', value: 48000 },
+                { name: 'APR', value: 61000 },
+                { name: 'MAY', value: 55000 },
+                { name: 'JUN', value: 67000 },
+            ];
+
+            return {
+                id: Date.now().toString(),
+                text: "Generating Engineering Schematic: **6-Month Spend Trend**.",
+                sender: 'ai',
+                timestamp: new Date(),
+                chartType: 'bar',
+                chartTitle: 'SPEND VELOCITY (K)',
+                chartData: trendData
+            };
+        }
+
         return null;
     };
 
@@ -186,7 +209,7 @@ export const AetherChatbot: React.FC<AetherChatbotProps> = ({ onAction }) => {
         <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end pointer-events-none">
             {/* CHAT WINDOW */}
             {isOpen && (
-                <div className="mb-4 w-80 h-96 bg-slate-900 border border-slate-700 rounded-sm shadow-2xl flex flex-col overflow-hidden pointer-events-auto font-mono">
+                <div className="mb-4 w-96 h-[500px] bg-slate-950 border border-slate-700 rounded-sm shadow-2xl flex flex-col overflow-hidden pointer-events-auto font-mono">
                     {/* HEADER */}
                     <div className="p-4 bg-slate-950 flex justify-between items-center border-b border-slate-800">
                         <div className="flex items-center">
@@ -204,11 +227,11 @@ export const AetherChatbot: React.FC<AetherChatbotProps> = ({ onAction }) => {
                     </div>
 
                     {/* MESSAGES */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent bg-slate-900">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent bg-slate-950">
                         {messages.map(msg => (
                             <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[85%] p-3 text-xs leading-relaxed ${msg.sender === 'user'
-                                    ? 'bg-slate-800 text-slate-200 border border-slate-700'
+                                    ? 'bg-slate-900 text-slate-200 border border-slate-700'
                                     : 'bg-slate-950 text-emerald-400 border border-emerald-900/30 font-mono'
                                     }`}>
                                     <span className="opacity-50 text-[10px] uppercase block mb-1 tracking-wider">
@@ -218,25 +241,41 @@ export const AetherChatbot: React.FC<AetherChatbotProps> = ({ onAction }) => {
 
                                     {/* VISUAL RESPONSE RENDERER */}
                                     {msg.chartData && msg.chartType && (
-                                        <div className="mt-4 bg-slate-900 p-2 rounded border border-slate-700 w-full h-40">
-                                            {msg.chartTitle && <p className="text-[10px] font-bold mb-2 uppercase text-emerald-500">{msg.chartTitle}</p>}
-                                            <ResponsiveContainer width="100%" height="100%">
+                                        <div className="mt-4 bg-[#0B1221] p-4 rounded-sm border border-emerald-900/50 w-full h-48 relative overflow-hidden">
+                                            {/* Technical Grid Overlay */}
+                                            <div className="absolute inset-0 pointer-events-none opacity-10"
+                                                style={{ backgroundImage: 'linear-gradient(#10B981 1px, transparent 1px), linear-gradient(90deg, #10B981 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+                                            </div>
+
+                                            {msg.chartTitle && <div className="flex items-center mb-2 border-b border-emerald-900/30 pb-1">
+                                                <div className="w-2 h-2 bg-emerald-500 mr-2 animate-pulse"></div>
+                                                <p className="text-[10px] font-bold uppercase text-emerald-500 tracking-widest">{msg.chartTitle}</p>
+                                            </div>}
+
+                                            <ResponsiveContainer width="100%" height="80%">
                                                 {msg.chartType === 'pie' ? (
                                                     <PieChart>
-                                                        <Pie data={msg.chartData} innerRadius={25} outerRadius={45} paddingAngle={2} dataKey="value">
+                                                        <Pie data={msg.chartData} innerRadius={30} outerRadius={50} paddingAngle={4} dataKey="value" stroke="none">
                                                             {msg.chartData.map((entry: any, index: number) => (
-                                                                <Cell key={`cell-${index}`} fill={entry.color || ['#10B981', '#3B82F6', '#F59E0B', '#EF4444'][index % 4]} />
+                                                                <Cell key={`cell-${index}`} fill={entry.color || ['#10B981', '#059669', '#34D399', '#064E3B'][index % 4]} />
                                                             ))}
                                                         </Pie>
-                                                        <RechartsTooltip contentStyle={{ backgroundColor: '#0F172A', border: '1px solid #334155', fontSize: '10px' }} itemStyle={{ color: '#E2E8F0' }} />
+                                                        <RechartsTooltip
+                                                            contentStyle={{ backgroundColor: '#020617', border: '1px solid #10B981', fontSize: '10px', fontFamily: 'monospace', color: '#10B981' }}
+                                                            itemStyle={{ color: '#10B981' }}
+                                                        />
                                                     </PieChart>
                                                 ) : (
                                                     <BarChart data={msg.chartData}>
-                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
-                                                        <XAxis dataKey="name" tick={{ fill: '#94A3B8', fontSize: 9 }} />
-                                                        <YAxis tick={{ fill: '#94A3B8', fontSize: 9 }} />
-                                                        <Tooltip contentStyle={{ backgroundColor: '#0F172A', border: '1px solid #334155', fontSize: '10px' }} cursor={{ fill: '#1E293B' }} />
-                                                        <Bar dataKey="value" fill="#10B981" radius={[2, 2, 0, 0]} />
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E293B" />
+                                                        <XAxis dataKey="name" tick={{ fill: '#64748B', fontSize: 9, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
+                                                        <YAxis tick={{ fill: '#64748B', fontSize: 9, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
+                                                        <Tooltip
+                                                            contentStyle={{ backgroundColor: '#020617', border: '1px solid #10B981', fontSize: '10px', fontFamily: 'monospace' }}
+                                                            cursor={{ fill: '#1E293B', opacity: 0.5 }}
+                                                            itemStyle={{ color: '#10B981' }}
+                                                        />
+                                                        <Bar dataKey="value" fill="#10B981" radius={[0, 0, 0, 0]} barSize={20} />
                                                     </BarChart>
                                                 )}
                                             </ResponsiveContainer>
