@@ -21,6 +21,12 @@ import { RBACSettings } from './pages/RBACSettings';
 import { CostToServe } from './pages/CostToServe';
 import { CarrierPerformance } from './pages/CarrierPerformance';
 import { AnomalyDetection } from './pages/AnomalyDetection';
+import { ContractManager } from './pages/ContractManager';
+import { SpotMarket } from './pages/SpotMarket';
+import { GuestBid } from './pages/GuestBid';
+import { VendorOnboarding } from './pages/VendorOnboarding';
+import { DocumentAnalysis } from './pages/DocumentAnalysis';
+import { VendorScorecard } from './pages/VendorScorecard';
 import { Invoice, UserRole, InvoiceStatus, RoleDefinition, WorkflowStepConfig, Dispute, Notification, MatchStatus } from './types';
 import { ParsedEdi } from './utils/ediParser';
 import { MOCK_INVOICES, INITIAL_ROLES, INITIAL_WORKFLOW } from './constants';
@@ -30,8 +36,8 @@ import { Bell, LogOut, ChevronDown, UserCircle, Users, Shield, Briefcase, Comman
 // Persona Definition for Demo Switching
 const DEMO_PERSONAS = [
   { id: 'atlas', name: 'Atlas', role: 'Enterprise Director', roleId: 'ENTERPRISE_ADMIN', userRole: '3SC' as UserRole, avatar: 'https://i.pravatar.cc/150?u=atlas' },
-  { id: 'lan', name: 'Lan Banh', role: 'Logistics Ops', roleId: 'OPS_MANAGER', userRole: '3SC' as UserRole, avatar: 'https://i.pravatar.cc/150?u=lan' },
-  { id: 'william', name: 'William', role: 'Finance Manager', roleId: 'FINANCE_MANAGER', userRole: '3SC' as UserRole, avatar: 'https://i.pravatar.cc/150?u=william' },
+  { id: 'lan', name: 'Kaai Bansal', role: 'Logistics Ops', roleId: 'OPS_MANAGER', userRole: '3SC' as UserRole, avatar: 'https://i.pravatar.cc/150?u=lan' },
+  { id: 'william', name: 'Zeya Kapoor', role: 'Finance Manager', roleId: 'FINANCE_MANAGER', userRole: '3SC' as UserRole, avatar: 'https://i.pravatar.cc/150?u=william' },
   { id: 'admin', name: 'System Admin', role: 'Super User', initials: 'AD', roleId: 'ENTERPRISE_ADMIN', userRole: '3SC' as UserRole, color: 'purple' }
 ];
 
@@ -71,7 +77,7 @@ const App: React.FC = () => {
   );
 
   const [workflowConfig, setWorkflowConfig] = useState<WorkflowStepConfig[]>(() =>
-    StorageService.load('workflow_v2', INITIAL_WORKFLOW)
+    StorageService.load('workflow_v3', INITIAL_WORKFLOW) // Bumped version to force reset
   );
 
   // Persistence Effects
@@ -84,12 +90,26 @@ const App: React.FC = () => {
   }, [roles]);
 
   React.useEffect(() => {
-    StorageService.save('workflow_v2', workflowConfig);
+    StorageService.save('workflow_v3', workflowConfig);
   }, [workflowConfig]);
+
+  // Handle Guest Link
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'guest_bid') {
+      setActiveTab('guest_bid');
+    } else if (params.get('mode') === 'onboarding') {
+      setActiveTab('onboarding');
+    }
+  }, []);
 
   // Handler for invoice updates from Workbench
   const handleInvoiceUpdate = (updatedInvoice: Invoice) => {
     setInvoices(prev => prev.map(inv => inv.id === updatedInvoice.id ? updatedInvoice : inv));
+  };
+
+  const handleInvoiceAdd = (newInvoice: Invoice) => {
+    setInvoices(prev => [newInvoice, ...prev]);
   };
 
   // --- HANDLERS ---
@@ -141,7 +161,8 @@ const App: React.FC = () => {
         };
         const updatedDispute: Dispute = {
           status: 'VENDOR_RESPONDED',
-          history: [...(inv.dispute?.history || []), newHistoryEntry]
+          history: [...(inv.dispute?.history || []), newHistoryEntry],
+          messages: inv.dispute?.messages || []
         };
         return { ...inv, status: InvoiceStatus.VENDOR_RESPONDED, dispute: updatedDispute };
       }
@@ -273,7 +294,7 @@ const App: React.FC = () => {
       origin: 'Unknown Origin', // EDI 210 usually has N4 segments for this, simplified here
       destination: 'Unknown Destination',
       amount: parsed.metadata.amount || 0,
-      currency: parsed.metadata.currency || 'USD',
+      currency: parsed.metadata.currency || 'INR',
       date: parsed.metadata.date || new Date().toISOString().split('T')[0],
       status: InvoiceStatus.PENDING,
       variance: 0,
@@ -348,6 +369,30 @@ const App: React.FC = () => {
     }, 3800);
   };
 
+
+  // --- AGENTIC AI HANDLER ---
+  const handleChatbotAction = (action: string, entityId: string, details?: string) => {
+    console.log(`[AGENT] Executing Action: ${action} on ${entityId}`);
+
+    if (action === 'APPROVE_INVOICE' || action === 'FLAG_DISPUTE') {
+      const invoice = invoices.find(inv => inv.invoiceNumber === entityId || inv.id === entityId);
+      if (invoice) {
+        const updatedInvoice = { ...invoice };
+        if (action === 'APPROVE_INVOICE') {
+          updatedInvoice.status = InvoiceStatus.APPROVED;
+          setNotifications(prev => [...prev, { id: Date.now(), message: `AI Agent approved invoice ${entityId}`, type: 'success', read: false, timestamp: new Date() }]);
+        } else if (action === 'FLAG_DISPUTE') {
+          updatedInvoice.status = InvoiceStatus.EXCEPTION;
+          updatedInvoice.reason = 'Flagged by AI Agent: ' + (details || 'Review Required');
+          setNotifications(prev => [...prev, { id: Date.now(), message: `AI Agent flagged invoice ${entityId}`, type: 'alert', read: false, timestamp: new Date() }]);
+        }
+        handleInvoiceUpdate(updatedInvoice);
+        return true;
+      }
+    }
+    return false;
+  };
+
   // --- RENDER CONTENT ---
   const renderContent = () => {
     if (selectedInvoice) {
@@ -383,7 +428,7 @@ const App: React.FC = () => {
       case 'integration':
         return <IntegrationHub onIngestEdi={handleIngestEdi} />;
       case 'workbench':
-        return <InvoiceWorkbench invoices={invoices} onSelectInvoice={handleInvoiceSelect} onUpdateInvoices={handleInvoiceUpdate} />;
+        return <InvoiceWorkbench invoices={invoices} onSelectInvoice={handleInvoiceSelect} onUpdateInvoices={handleInvoiceUpdate} onAddInvoice={handleInvoiceAdd} />;
       case 'settlement':
         return <SettlementFinance userRole={userRole} />;
       case 'intelligence':
@@ -398,6 +443,12 @@ const App: React.FC = () => {
         return <CarrierPerformance onNavigate={handleNavigation} />;
       case 'aad':
         return <AnomalyDetection onNavigate={handleNavigation} />;
+      case 'contracts':
+        return <ContractManager />;
+      case 'spot_market':
+        return <SpotMarket />;
+      case 'scorecard':
+        return <VendorScorecard />;
       case 'rbac':
         return (
           <RBACSettings
@@ -420,6 +471,14 @@ const App: React.FC = () => {
         );
     }
   };
+
+  if (activeTab === 'guest_bid') {
+    return <GuestBid />;
+  }
+
+  if (activeTab === 'onboarding') {
+    return <VendorOnboarding />;
+  }
 
   if (!isLoggedIn) {
     if (showVendorGate) {
@@ -456,10 +515,10 @@ const App: React.FC = () => {
       <Sidebar activeTab={activeTab} setActiveTab={(tab) => { setActiveTab(tab); setSelectedInvoice(null); }} userRole={userRole} activePersona={activePersona} />
 
       <main className="ml-64 flex-1 flex flex-col h-screen overflow-hidden bg-slate-100">
-        <header className="h-14 bg-white border-b border-slate-300 flex items-center justify-between px-6 shadow-sm z-20 flex-shrink-0">
+        <header className="h-14 bg-white border-b border-slate-300 flex items-center justify-between px-6 shadow-sm z-50 flex-shrink-0 relative">
           <div className="flex items-center">
             <h1 className="text-sm font-bold text-slate-700 tracking-tight flex items-center mr-6 uppercase">
-              {userRole === 'HITACHI' ? 'HITACHI ENERGY' : userRole === 'VENDOR' ? 'MAERSK LINE' : '3SC CONTROL TOWER'}
+              {userRole === 'HITACHI' ? <span className="font-cursive text-3xl text-black lowercase first-letter:text-[#E60012] first-letter:uppercase mr-3" style={{ transform: 'translateY(4px)' }}>Confidential</span> : userRole === 'VENDOR' ? 'MAERSK LINE' : 'SEQUELSTRING AI CONTROL TOWER'}
               <span className="text-slate-300 mx-2">|</span>
               <span className="text-slate-500 font-normal">
                 {userRole === 'HITACHI' ? 'Finance Cockpit' : userRole === 'VENDOR' ? 'Supplier Portal' : 'Admin Console'}
@@ -547,7 +606,7 @@ const App: React.FC = () => {
           </ErrorBoundary>
         </div>
       </main>
-      <AetherChatbot />
+      <AetherChatbot onAction={handleChatbotAction} />
     </div>
   );
 };

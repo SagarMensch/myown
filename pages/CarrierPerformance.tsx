@@ -64,13 +64,15 @@ export const CarrierPerformance: React.FC<CarrierPerformanceProps> = ({ onNaviga
     };
 
     return (
-        <div className="p-8 bg-slate-50 min-h-screen animate-fade-in-up">
+        <div className="p-8 bg-slate-50 min-h-screen">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 flex items-center">
-                        <Award className="mr-3 text-purple-600" /> Carrier Performance Score (CPS)
-                    </h1>
-                    <p className="text-slate-500 mt-1">Weighted scoring and automated vendor ranking.</p>
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 flex items-center">
+                            Carrier Performance Score (CPS)
+                        </h1>
+                        <p className="text-slate-500 mt-1">Weighted scoring and automated vendor ranking.</p>
+                    </div>
                 </div>
             </div>
 
@@ -78,7 +80,7 @@ export const CarrierPerformance: React.FC<CarrierPerformanceProps> = ({ onNaviga
                 {/* WEIGHT CONFIGURATOR */}
                 <div className="col-span-3 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-fit">
                     <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-6 flex items-center">
-                        <Sliders size={16} className="mr-2 text-blue-600" /> Scoring Weights
+                        Scoring Weights
                     </h3>
                     <div className="space-y-6">
                         {Object.entries(weights).map(([key, val]) => (
@@ -103,13 +105,18 @@ export const CarrierPerformance: React.FC<CarrierPerformanceProps> = ({ onNaviga
                 {/* MAIN CONTENT */}
                 <div className="col-span-9 space-y-6">
                     {/* TOP CARRIER CARD */}
-                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg p-6 text-white shadow-lg flex justify-between items-center">
-                        <div>
-                            <p className="text-purple-200 text-xs font-bold uppercase tracking-wider mb-1">Top Performer</p>
-                            <h2 className="text-3xl font-bold">{topCarrier.carrierName}</h2>
-                            <div className="flex items-center mt-2 space-x-4">
-                                <span className="bg-white/20 px-2 py-1 rounded text-xs font-bold">Score: {topCarrier.overallScore.toFixed(1)}</span>
-                                <span className="flex items-center text-xs text-purple-100"><CheckCircle size={14} className="mr-1" /> 99% Damage Free</span>
+                    {/* Top Performer Card - Enterprise Style */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 flex justify-between items-center mb-8 relative overflow-hidden">
+                        <div className="z-10">
+                            <h2 className="text-sm font-bold text-slate-500 tracking-wider uppercase mb-2">Top Performing Carrier</h2>
+                            <div className="flex items-center gap-4">
+                                <h1 className="text-4xl font-bold text-slate-800">{topCarrier.carrierName}</h1>
+                                <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full border border-green-200">
+                                    Score: {topCarrier.overallScore.toFixed(1)}
+                                </span>
+                            </div>
+                            <div className="flex items-center mt-4 text-slate-600 font-medium">
+                                <span>99% Damage Free Delivery</span>
                             </div>
                         </div>
                         <div className="h-32 w-64">
@@ -121,10 +128,10 @@ export const CarrierPerformance: React.FC<CarrierPerformanceProps> = ({ onNaviga
                                     { subject: 'Rate', A: topCarrier.metrics.rateConsistency, fullMark: 100 },
                                     { subject: 'Damage', A: topCarrier.metrics.damageRatio, fullMark: 100 },
                                 ]}>
-                                    <PolarGrid stroke="rgba(255,255,255,0.3)" />
-                                    <PolarAngleAxis dataKey="subject" tick={{ fill: 'white', fontSize: 11, fontWeight: 'bold' }} />
+                                    <PolarGrid stroke="rgba(0,0,0,0.1)" />
+                                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#475569', fontSize: 11, fontWeight: 'bold' }} />
                                     <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                                    <Radar name={topCarrier.carrierName} dataKey="A" stroke="#fff" strokeWidth={2} fill="#fff" fillOpacity={0.5} />
+                                    <Radar name={topCarrier.carrierName} dataKey="A" stroke="#2563eb" strokeWidth={2} fill="#3b82f6" fillOpacity={0.5} />
                                 </RadarChart>
                             </ResponsiveContainer>
                         </div>
@@ -135,7 +142,7 @@ export const CarrierPerformance: React.FC<CarrierPerformanceProps> = ({ onNaviga
                         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
                             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Carrier Rankings</h3>
                             <button onClick={handleExportScorecard} className="text-xs font-bold text-blue-600 hover:underline flex items-center">
-                                <Download size={14} className="mr-1" /> Export CSV
+                                Export CSV
                             </button>
                         </div>
                         <table className="w-full text-sm text-left">
@@ -165,12 +172,12 @@ export const CarrierPerformance: React.FC<CarrierPerformanceProps> = ({ onNaviga
                                                     className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
                                                     title="View Active Anomalies"
                                                 >
-                                                    <AlertTriangle size={10} className="mr-1" /> 1
+                                                    1
                                                 </button>
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className="text-lg font-bold text-purple-600">{c.overallScore.toFixed(1)}</span>
+                                            <span className="text-lg font-bold text-blue-600">{c.overallScore.toFixed(1)}</span>
                                         </td>
                                         <td className="px-6 py-4 text-center text-slate-600">{c.metrics.onTimeDelivery}%</td>
                                         <td className="px-6 py-4 text-center text-slate-600">{c.metrics.invoiceAccuracy}%</td>

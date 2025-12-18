@@ -7,11 +7,26 @@ import {
   ShieldCheck, AlertTriangle, FileText, DollarSign,
   AlertCircle, Clock, Link as LinkIcon, Box, PieChart, Lock,
   MessageSquare, User, Building2, Cpu, Edit2, Ship, Anchor, Container,
-  HelpCircle, FileText as FileIcon, Eye, BookOpen
+  HelpCircle, FileText as FileIcon, Eye, BookOpen, GitMerge, Calculator,
+  ScanSearch, TrendingDown, Coins, Award, Target, FileCheck, Truck, Leaf, Link as LinkIcon2, Landmark
 } from 'lucide-react';
 import { generateAuditTrailPDF } from '../utils/reportGenerator';
 import { Button } from '../components/Button';
+import { checkClaimsStatus } from '../services/claimsService';
 import { Card } from '../components/Card';
+import { generateGLAllocation } from '../services/glCodingService';
+import { calculateLandedCost } from '../services/landedCostService';
+import { verifySpotMatch } from '../services/spotQuoteService';
+import { validateTaxCompliance, taxService } from '../services/taxService';
+import { benchmarkRate } from '../services/benchmarkingService';
+import { calculateEarlyPaymentOffer } from '../services/earlyPaymentService';
+import { performThreeWayMatch } from '../services/threeWayMatchService';
+import { calculateCarbon } from '../services/carbonService';
+import { getCarrierScorecard, getScoreColor } from '../services/carrierScorecardService';
+import { analyzeParcelInvoice } from '../services/parcelAuditService';
+import { DisputeChat } from '../components/DisputeChat';
+
+
 
 interface InvoiceDetailProps {
   invoice: Invoice;
@@ -24,6 +39,22 @@ interface InvoiceDetailProps {
 }
 
 export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, onUpdateInvoice, activePersona, roles, workflowConfig, onWorkflowDecision }) => {
+  const taxCheck = validateTaxCompliance(invoice);
+  const glData = generateGLAllocation(invoice);
+  const marketBench = benchmarkRate(invoice.origin || '', invoice.destination || '', 'OCEAN', invoice.baseAmount || invoice.amount, 1);
+  const scorecard = getCarrierScorecard(invoice.carrier);
+  const threeWay = performThreeWayMatch(invoice);
+  const carbon = calculateCarbon(invoice);
+
+  const claimsData = checkClaimsStatus(invoice);
+  const parcelAudit = analyzeParcelInvoice(invoice);
+
+  // INDIA TAX ENGINE
+  const taxBreakdown = taxService.calculateTax(invoice.baseAmount || invoice.amount, invoice.carrier);
+
+  // Landed Cost Calc
+  const landedCosts = invoice.skuList ? calculateLandedCost(invoice.baseAmount || invoice.amount, invoice.skuList, 'Air') : [];
+
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [reasonCode, setReasonCode] = useState('');
   const [comment, setComment] = useState('');
@@ -38,7 +69,6 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, o
   };
 
   const handleRequestInfo = () => {
-    // In a real app, this would trigger a query workflow
     // In a real app, this would trigger a query workflow
     console.log(`Query sent to ${invoice.carrier} regarding Invoice #${invoice.invoiceNumber}. Status updated to 'PENDING INFO'.`);
   };
@@ -102,7 +132,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, o
                   {invoice.lineItems.map((item, idx) => (
                     <tr key={idx} className="border-b border-gray-200">
                       <td className="py-2">{item.description}</td>
-                      <td className="py-2 text-right">${item.amount.toFixed(2)}</td>
+                      <td className="py-2 text-right">₹{item.amount.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -111,16 +141,26 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, o
                 <div className="w-48">
                   <div className="flex justify-between py-1">
                     <span>Subtotal:</span>
-                    <span>${invoice.amount.toFixed(2)}</span>
+                    <span>₹{invoice.amount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-black">
-                    <span>Tax (0%):</span>
-                    <span>$0.00</span>
+                    <span>Tax:</span>
+                    <div className="text-right">
+                      <span>₹{(invoice.taxTotal || 0).toFixed(2)}</span>
+                      {invoice.taxDetails && invoice.taxDetails.map((t, idx) => (
+                        <div key={idx} className="text-[10px] text-gray-500 italic">{t.type} @ {(t.rate * 100).toFixed(1)}%</div>
+                      ))}
+                    </div>
                   </div>
                   <div className="flex justify-between py-2 font-bold text-sm">
                     <span>TOTAL:</span>
-                    <span>${invoice.amount.toFixed(2)} USD</span>
+                    <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.amount)} {invoice.currency}</span>
                   </div>
+                  {invoice.currency !== 'USD' && (
+                    <div className="text-[10px] text-right text-gray-400 mt-1">
+                      *Settlement in {invoice.baseCurrency || 'USD'}: ₹{(invoice.baseAmount || 0).toFixed(2)} (Exch Rate: {invoice.exchangeRate})
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="text-center text-gray-400 text-[10px] mt-auto">
@@ -141,10 +181,17 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, o
             <div className="flex items-center mt-2 space-x-4">
               <p className="text-sm text-slate-500">AI Confidence: <span className="text-teal-600 font-bold">{invoice.extractionConfidence}%</span></p>
               <span className="text-slate-300">|</span>
-              <p className="text-sm text-slate-500">Match Status: <span className={`font-bold ${invoice.variance > 0 ? 'text-red-600' : 'text-teal-600'}`}>{invoice.variance > 0 ? 'Discrepancy Found' : 'Perfect Match'}</span></p>
+              <p className="text-sm text-slate-500 flex items-center">
+                Tax Check:
+                <span className={`font-bold ml-1 flex items-center ${taxCheck.isValid ? 'text-teal-600' : 'text-red-500'}`}>
+                  {taxCheck.isValid ? <CheckCircle size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
+                  {taxCheck.isValid ? 'Global Pass' : 'Compliance Risk'}
+                </span>
+              </p>
+              <span className="text-slate-300">|</span>
+              <p className="text-sm text-slate-500">Match Status: <span className={`font-bold ${invoice.variance > 0 ? 'text-red-600' : 'text-teal-600'}`}>{invoice.variance > 0 ? 'Discrepancy' : 'Perfect'}</span></p>
             </div>
           </div>
-
           <div className="p-8 space-y-8">
             {/* AI INSIGHTS PANEL */}
             <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 rounded-lg p-5 shadow-sm relative overflow-hidden">
@@ -156,39 +203,40 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, o
               </h4>
               <p className="text-sm text-gray-700 relative z-10 leading-relaxed">
                 {invoice.variance >
-                  0 ? `Detected a $${invoice.variance.toFixed(2)} discrepancy. The billed amount exceeds the contract rate. This appears to be due to unapproved accessorial charges or a rate index mismatch.`
+                  0 ? `Detected a ₹${invoice.variance.toFixed(2)} discrepancy. The billed amount exceeds the contract rate. This appears to be due to unapproved accessorial charges or a rate index mismatch.`
                   : "Invoice matches the contracted rate card (Contract #GB01/0010). No anomalies detected in weight or volume calculations."}
               </p>
             </div>
-            {invoice.dispute && (
-              <div className="bg-amber-50 border border-amber-200 rounded-sm p-4">
-                <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-3 flex items-center">
-                  <MessageSquare size={14} className="mr-2" /> Dispute History
-                </h4>
-                <div className="space-y-3">
-                  {invoice.dispute.history.map((item, idx) => {
-                    const isVendor = item.actor === 'Vendor';
-                    return (
-                      <div key={idx} className="flex items-start space-x-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${isVendor ? 'bg-blue-600 text-white' : 'bg-teal-600 text-white'}`}>
-                          {isVendor ? <Building2 size={12} /> : <User size={12} />}
-                        </div>
-                        <div>
-                          <p className="text-xs">
-                            <span className="font-bold">{item.actor}</span>
-                            <span className="text-gray-500 ml-2">{item.action}</span>
-                          </p>
-                          {item.comment && (
-                            <p className="text-sm text-gray-800 mt-1 bg-white p-2 border border-gray-200 rounded-sm italic">
-                              "{item.comment}"
-                            </p>
-                          )}
-                          <p className="text-[10px] text-gray-400 mt-1">{item.timestamp}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
+            {/* Smart GL Splitter */}
+            <div className="bg-white border text-[10px] sm:text-xs border-indigo-100 rounded p-4 mb-4 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-2 opacity-5">
+                <GitMerge size={64} className="text-indigo-600" />
+              </div>
+              <h3 className="font-bold text-indigo-900 mb-3 flex items-center">
+                <GitMerge size={14} className="mr-2" /> Automated GL Coding
+              </h3>
+              {glData.map((seg, i) => (
+                <div key={i} className="mb-2 last:mb-0">
+                  <div className="flex justify-between mb-1">
+                    <span className="font-medium text-slate-600">{seg.segment} ({seg.code})</span>
+                    <span className="font-bold text-slate-800">{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(seg.amount)}</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                    <div className={`h-1.5 rounded-full ${seg.color}`} style={{ width: `${seg.percentage}%` }}></div>
+                  </div>
                 </div>
+              ))}
+            </div>
+            {invoice.dispute && (
+              <div className="mb-6">
+                <DisputeChat
+                  invoice={invoice}
+                  onUpdateInvoice={onUpdateInvoice}
+                  currentUser={{
+                    name: activePersona.name,
+                    role: activePersona.role === 'VENDOR' ? 'VENDOR' : 'AUDITOR'
+                  }}
+                />
               </div>
             )}
 
@@ -203,11 +251,167 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, o
               </div>
               <div className="p-4 bg-gray-50 rounded-sm border border-gray-100">
                 <p className="text-xs text-gray-400 uppercase font-bold">Total Amount</p>
-                <p className="text-sm font-bold text-gray-900 mt-1">${invoice.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm font-bold text-gray-900 mt-1">₹{invoice.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
               </div>
               <div className="p-4 bg-gray-50 rounded-sm border border-gray-100">
                 <p className="text-xs text-gray-400 uppercase font-bold">Invoice Date</p>
                 <p className="text-sm font-bold text-gray-900 mt-1">{invoice.date}</p>
+              </div>
+            </div>
+
+            {/* INDIA TAX ENGINE WIDGET */}
+            <div className="bg-white border-2 border-dashed border-teal-200 rounded-lg p-5 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-2 opacity-5">
+                <Landmark size={80} className="text-teal-600" />
+              </div>
+              <h3 className="text-sm font-bold text-teal-800 uppercase tracking-wider mb-4 flex items-center relative z-10">
+                <Landmark size={16} className="mr-2" /> India Tax Engine (GST + TDS)
+              </h3>
+
+              <div className="space-y-3 relative z-10 text-sm">
+
+                {/* 1. Base */}
+                <div className="flex justify-between items-center text-gray-600">
+                  <span>Base Freight</span>
+                  <span className="font-mono">₹{taxBreakdown.taxableAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                </div>
+
+                {/* 2. GST */}
+                {taxBreakdown.isRcm ? (
+                  <div className="flex justify-between items-center text-orange-600 bg-orange-50 p-2 rounded">
+                    <span className="flex items-center text-xs font-bold"><AlertTriangle size={12} className="mr-1" /> (+) GST (RCM {taxBreakdown.gstRate}%)</span>
+                    <span className="font-mono font-bold">₹{taxBreakdown.gstPayableToGovt.toLocaleString()} [Pay to Govt]</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center text-gray-500">
+                    <span className="text-xs">(+) GST (FCM {taxBreakdown.gstRate}%)</span>
+                    <span className="font-mono">₹{taxBreakdown.gstPayableToVendor.toLocaleString()}</span>
+                  </div>
+                )}
+
+                {/* 3. TDS */}
+                <div className="flex justify-between items-center text-red-600">
+                  <span className="flex items-center text-xs"><TrendingDown size={12} className="mr-1" /> (-) TDS ({taxBreakdown.tdsRate}%)</span>
+                  <span className="font-mono font-bold">₹{taxBreakdown.tdsAmount.toLocaleString()}</span>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-teal-100 my-2"></div>
+
+                {/* 4. NET PAYABLE */}
+                <div className="flex justify-between items-center text-teal-900">
+                  <span className="font-bold">Net Transfer to Vendor</span>
+                  <span className="font-mono text-xl font-bold">₹{taxBreakdown.netPayableToVendor.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+
+              {/* Context Tags */}
+              <div className="mt-4 flex space-x-2">
+                {taxBreakdown.isRcm && <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-bold">RCM APPLICABLE</span>}
+                {taxBreakdown.tdsRate < 1 && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">LOWER DEDUCTION CERT</span>}
+                <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded">Sec {taxBreakdown.sectionCode}</span>
+              </div>
+            </div>
+
+            {/* PARCEL AUDIT WIDGET */}
+            {invoice.parcelDetails && (
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm mb-6">
+                <div className="bg-orange-50/50 px-4 py-3 border-b border-orange-100 flex justify-between items-center">
+                  <h3 className="text-sm font-bold text-orange-900 flex items-center">
+                    <Box size={16} className="mr-2 text-orange-600" /> Parcel Audit (Small Package)
+                  </h3>
+                  {parcelAudit.scanStatus === 'CLEAN' ? (
+                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold flex items-center"><Check size={12} className="mr-1" /> Audit Passed</span>
+                  ) : (
+                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold flex items-center"><AlertTriangle size={12} className="mr-1" /> Refund Opportunities</span>
+                  )}
+                </div>
+
+                <div className="p-4">
+                  <div className="flex justify-between items-end mb-4 border-b border-orange-100 pb-4">
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase font-bold mb-1">Potential Savings</p>
+                      <p className="text-3xl font-bold text-gray-900">₹{parcelAudit.potentialRefund.toFixed(2)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500 mb-1">Carrier Service</p>
+                      <p className="text-sm font-bold text-gray-800">{invoice.parcelDetails.serviceType}</p>
+                      <p className="text-xs text-gray-400 font-mono mt-0.5">{invoice.parcelDetails.trackingNumber}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* LSR / Late Delivery */}
+                    <div className={`p-3 rounded border ${!parcelAudit.checks.gsr.valid ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-xs font-bold uppercase text-gray-600">Late Delivery (GSR)</span>
+                        {!parcelAudit.checks.gsr.valid && <span className="text-xs font-bold text-red-600">+₹{parcelAudit.checks.gsr.savings}</span>}
+                      </div>
+                      <p className="text-xs text-gray-700 leading-snug">{parcelAudit.checks.gsr.details}</p>
+                    </div>
+
+                    {/* Dim Weight */}
+                    <div className={`p-3 rounded border ${!parcelAudit.checks.dimWeight.valid ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-xs font-bold uppercase text-gray-600">Dim Weight Audit</span>
+                        {!parcelAudit.checks.dimWeight.valid && <span className="text-xs font-bold text-red-600">+₹{parcelAudit.checks.dimWeight.savings}</span>}
+                      </div>
+                      <p className="text-xs text-gray-700 leading-snug">{parcelAudit.checks.dimWeight.details}</p>
+                      <div className="mt-2 text-[10px] text-gray-400 flex space-x-2">
+                        <span>Billed: {invoice.parcelDetails.billedWeight}lb</span>
+                        <span>Dim: {invoice.parcelDetails.dimWeight}lb</span>
+                      </div>
+                    </div>
+
+                    {/* Residential Check */}
+                    <div className={`p-3 rounded border ${!parcelAudit.checks.residential.valid ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-xs font-bold uppercase text-gray-600">Resi Surcharge</span>
+                        {!parcelAudit.checks.residential.valid && <span className="text-xs font-bold text-red-600">+₹{parcelAudit.checks.residential.savings}</span>}
+                      </div>
+                      <p className="text-xs text-gray-700 leading-snug">{parcelAudit.checks.residential.details}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 3-WAY MATCH AUTOMATION */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm mb-6">
+              <div className="bg-indigo-50/50 px-4 py-3 border-b border-indigo-100 flex justify-between items-center">
+                <h3 className="text-sm font-bold text-indigo-900 flex items-center">
+                  <LinkIcon2 size={16} className="mr-2 text-indigo-600" /> 3-Way Match Automation
+                </h3>
+                {threeWay.isMatch ? (
+                  <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded border border-green-200 font-bold uppercase flex items-center">
+                    <CheckCircle size={10} className="mr-1" /> Reconciled
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded border border-red-200 font-bold uppercase flex items-center">
+                    <AlertTriangle size={10} className="mr-1" /> Discrepancy
+                  </span>
+                )}
+              </div>
+              <div className="p-4">
+                <div className="flex items-center justify-between relative">
+                  {/* Connector Line */}
+                  <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 -z-10"></div>
+                  <div className={`absolute top-1/2 left-0 h-0.5 -z-10 transition-all duration-1000 ${threeWay.isMatch ? 'bg-green-500 w-full' : 'bg-red-400 w-2/3'}`}></div>
+
+                  {/* Documents */}
+                  {threeWay.documents.map((doc, i) => (
+                    <div key={doc.type} className="flex flex-col items-center bg-white px-2">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 mb-2 ${doc.status === 'MATCHED' ? 'border-green-500 bg-green-50 text-green-600' : 'border-red-500 bg-red-50 text-red-600'}`}>
+                        {doc.type === 'INVOICE' && <FileText size={18} />}
+                        {doc.type === 'SHIPMENT_ORDER' && <FileCheck size={18} />}
+                        {doc.type === 'POD' && <Truck size={18} />}
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">{doc.type}</p>
+                      <p className="text-xs font-bold text-slate-800">{doc.reference}</p>
+                      {doc.status === 'MISMATCH' && <p className="text-[9px] text-red-500 font-bold mt-1">{doc.details}</p>}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -241,10 +445,10 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, o
                         {item.description}
                       </div>
                       <div className={`col-span-1 p-3 border-b border-gray-50 text-right font-mono ${hasVariance ? 'bg-red-50 text-red-700 font-bold' : 'text-gray-600'}`}>
-                        ${item.amount.toFixed(2)}
+                        ₹{item.amount.toFixed(2)}
                       </div>
                       <div className="col-span-1 p-3 border-b border-gray-50 text-right font-mono text-teal-700 font-bold bg-teal-50/10">
-                        ${item.expectedAmount.toFixed(2)}
+                        ₹{item.expectedAmount.toFixed(2)}
                       </div>
                     </React.Fragment>
                   );
@@ -253,10 +457,10 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, o
                 {/* Total Row */}
                 <div className="col-span-1 p-3 bg-gray-50 font-bold text-gray-800 text-xs uppercase">Total</div>
                 <div className={`col-span-1 p-3 bg-gray-50 text-right font-mono font-bold ${invoice.variance > 0 ? 'text-red-600' : 'text-gray-800'}`}>
-                  ${invoice.amount.toFixed(2)}
+                  ₹{invoice.amount.toFixed(2)}
                 </div>
                 <div className="col-span-1 p-3 bg-gray-50 text-right font-mono font-bold text-teal-700">
-                  ${(invoice.auditAmount || invoice.amount).toFixed(2)}
+                  ₹{(invoice.auditAmount || invoice.amount).toFixed(2)}
                 </div>
               </div>
             </div>
@@ -312,7 +516,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, o
                         <span className="text-gray-500 ml-2 font-mono">{seg.code}</span>
                       </div>
                       <div className="font-mono text-gray-900 font-bold">
-                        ${seg.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ₹{seg.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         <span className="text-gray-400 font-sans font-normal ml-1">({seg.percentage}%)</span>
                       </div>
                     </li>
@@ -447,8 +651,8 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, o
               })}
             </div>
           </div>
-        </div>
-      </div>
+        </div >
+      </div >
     );
   };
 
@@ -475,7 +679,18 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({ invoice, onBack, o
           <div className="flex items-center space-x-4">
             <div className="text-right mr-2">
               <p className="text-xs text-slate-500 font-bold uppercase">Total Amount</p>
-              <p className="text-2xl font-bold text-white tracking-tight">${invoice.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+              <p className="text-2xl font-bold text-white tracking-tight">
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.amount)}
+              </p>
+              {invoice.currency !== 'USD' && invoice.baseAmount && (
+                <p className="text-xs text-teal-400 font-mono mt-0.5 flex justify-end items-center">
+                  <span className="opacity-70 mr-1">USD Eqv:</span>
+                  ₹{invoice.baseAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  <span className="text-[9px] text-slate-500 ml-1 border border-slate-700 px-1 rounded bg-slate-800">
+                    @ {invoice.exchangeRate}
+                  </span>
+                </p>
+              )}
             </div>
             {invoice.status === InvoiceStatus.EXCEPTION && (
               <Button

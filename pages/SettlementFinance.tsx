@@ -214,8 +214,8 @@ export const SettlementFinance: React.FC<SettlementFinanceProps> = ({ userRole =
          id: `PY-${newRunForm.runDate}-${Math.floor(Math.random() * 1000)}`,
          runDate: newRunForm.runDate,
          entity: newRunForm.entity,
-         bankAccount: 'CITI-NEW (USD)',
-         currency: 'USD',
+         bankAccount: 'HDFC-NEW (INR)',
+         currency: 'INR',
          amount: 0,
          invoiceCount: 0,
          discountAvailable: 0,
@@ -231,7 +231,7 @@ export const SettlementFinance: React.FC<SettlementFinanceProps> = ({ userRole =
    };
 
    const handleApplyDiscount = () => {
-      triggerToast("Optimization Applied: $125.00 early payment discount secured.");
+      triggerToast("Optimization Applied: ₹125.00 early payment discount secured.");
       setBatches(prev => {
          const newB = [...prev];
          if (newB[0]) newB[0].riskScore = 'LOW';
@@ -270,16 +270,16 @@ export const SettlementFinance: React.FC<SettlementFinanceProps> = ({ userRole =
                <div className="grid grid-cols-3 gap-6">
                   <div className="bg-white p-5 rounded-sm border border-gray-200 shadow-sm">
                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Paid (YTD)</p>
-                     <p className="text-3xl font-bold text-gray-900 mt-2">$55,300.00</p>
+                     <p className="text-3xl font-bold text-gray-900 mt-2">₹55,300.00</p>
                   </div>
                   <div className="bg-white p-5 rounded-sm border border-gray-200 shadow-sm">
                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Last Payment</p>
-                     <p className="text-3xl font-bold text-gray-900 mt-2">$12,800.00</p>
+                     <p className="text-3xl font-bold text-gray-900 mt-2">₹12,800.00</p>
                      <p className="text-[10px] text-gray-400 mt-1">Received Nov 10</p>
                   </div>
                   <div className="bg-blue-600 p-5 rounded-sm border border-blue-700 shadow-sm text-white">
                      <p className="text-xs font-bold text-blue-200 uppercase tracking-wider">Next Scheduled</p>
-                     <p className="text-3xl font-bold text-white mt-2">$2,925.00</p>
+                     <p className="text-3xl font-bold text-white mt-2">₹2,925.00</p>
                      <p className="text-[10px] text-blue-200 mt-1">Est. Nov 28</p>
                   </div>
                </div>
@@ -307,7 +307,7 @@ export const SettlementFinance: React.FC<SettlementFinanceProps> = ({ userRole =
                               >
                                  <td className="px-6 py-4 text-gray-900 font-medium">{remit.date}</td>
                                  <td className="px-6 py-4 font-mono text-xs text-blue-600">{remit.ref}</td>
-                                 <td className="px-6 py-4 text-right font-bold text-gray-900">${remit.amount.toLocaleString()}</td>
+                                 <td className="px-6 py-4 text-right font-bold text-gray-900">₹{remit.amount.toLocaleString()}</td>
                                  <td className="px-6 py-4">
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase
                                       ${remit.status === 'PAID' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-blue-50 text-blue-700 border-blue-200'}
@@ -347,7 +347,7 @@ export const SettlementFinance: React.FC<SettlementFinanceProps> = ({ userRole =
                                                    <tr key={idx} className="border-b border-gray-50 last:border-0">
                                                       <td className="py-2 font-medium text-gray-800">{inv.number}</td>
                                                       <td className="py-2 text-gray-600">{inv.date}</td>
-                                                      <td className="py-2 text-right font-mono">${inv.amount.toLocaleString()}</td>
+                                                      <td className="py-2 text-right font-mono">₹{inv.amount.toLocaleString()}</td>
                                                    </tr>
                                                 ))}
                                              </tbody>
@@ -415,7 +415,7 @@ export const SettlementFinance: React.FC<SettlementFinanceProps> = ({ userRole =
                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Global Cash Position</p>
                      <Wallet size={18} className="text-teal-400" />
                   </div>
-                  <h3 className="text-3xl font-bold">$42.5M</h3>
+                  <h3 className="text-3xl font-bold">₹42.5M</h3>
                   <p className="text-[10px] text-gray-400 mt-1">Across 12 Entities</p>
                </div>
                <div className="bg-white p-5 rounded-sm border border-gray-200 shadow-sm">
@@ -423,7 +423,7 @@ export const SettlementFinance: React.FC<SettlementFinanceProps> = ({ userRole =
                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Pending Approvals</p>
                      <Clock size={18} className="text-orange-500" />
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-900">$2.7k</h3>
+                  <h3 className="text-3xl font-bold text-gray-900">₹2.7k</h3>
                   <p className="text-[10px] text-gray-400 mt-1">1 Batch Queued</p>
                </div>
                <div className="bg-white p-5 rounded-sm border border-gray-200 shadow-sm">
@@ -431,7 +431,7 @@ export const SettlementFinance: React.FC<SettlementFinanceProps> = ({ userRole =
                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Discount Capture (YTD)</p>
                      <TrendingUp size={18} className="text-green-600" />
                   </div>
-                  <h3 className="text-3xl font-bold text-green-600">$85.2k</h3>
+                  <h3 className="text-3xl font-bold text-green-600">₹85.2k</h3>
                   <p className="text-[10px] text-gray-400 mt-1">98% Efficiency</p>
                </div>
             </div>
@@ -646,7 +646,7 @@ export const SettlementFinance: React.FC<SettlementFinanceProps> = ({ userRole =
                      </div>
                      <div className="text-right">
                         <p className="text-xs font-bold text-gray-500 uppercase">Potential Savings</p>
-                        <p className="text-2xl font-bold text-gray-900">$125.00</p>
+                        <p className="text-2xl font-bold text-gray-900">₹125.00</p>
                      </div>
                      <button
                         onClick={handleApplyDiscount}
@@ -731,7 +731,7 @@ export const SettlementFinance: React.FC<SettlementFinanceProps> = ({ userRole =
                                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                                  <XAxis type="number" hide />
                                  <YAxis dataKey="unit" type="category" width={100} tick={{ fontSize: 10 }} />
-                                 <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                                 <Tooltip formatter={(value) => `₹${value.toLocaleString()}`} />
                                  <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
                                     {FUNDING_DATA.map((entry, index) => (
                                        <Cell key={`cell-${index}`} fill={entry.color} />
@@ -795,7 +795,7 @@ export const SettlementFinance: React.FC<SettlementFinanceProps> = ({ userRole =
                      This action utilizes your Digital Signature (ID: WC-9921).
                   </p>
                   <div className="bg-gray-50 p-4 border border-gray-200 rounded-sm mb-6 text-xs text-gray-500">
-                     <p className="flex justify-between mb-1"><span>Total Amount:</span> <span className="font-bold text-gray-900">${selectedBatch?.amount.toLocaleString()}</span></p>
+                     <p className="flex justify-between mb-1"><span>Total Amount:</span> <span className="font-bold text-gray-900">₹{selectedBatch?.amount.toLocaleString()}</span></p>
                      <p className="flex justify-between"><span>Beneficiaries:</span> <span className="font-bold text-gray-900">{selectedBatch?.invoiceCount} Vendors</span></p>
                   </div>
                   <div className="flex justify-end space-x-3">
@@ -952,7 +952,7 @@ const BatchDetailModal: React.FC<BatchDetailModalProps> = ({ batch, onClose, onA
                            <tr key={inv.id} className="hover:bg-gray-50">
                               <td className="px-6 py-4 font-mono text-xs">{inv.glSegments?.[0]?.code || 'N/A'}</td>
                               <td className="px-6 py-4 font-medium text-gray-800">{inv.carrier}</td>
-                              <td className="px-6 py-4 text-right font-mono text-gray-800">${inv.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                              <td className="px-6 py-4 text-right font-mono text-gray-800">₹{inv.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                               <td className="px-6 py-4 text-gray-600">{inv.dueDate}</td>
                               <td className="px-6 py-4 font-mono text-xs text-blue-600">{voucherId}</td>
                               <td className="px-6 py-4 text-center">

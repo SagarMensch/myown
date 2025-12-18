@@ -63,7 +63,7 @@ export const IntegrationHub: React.FC<IntegrationHubProps> = ({ onIngestEdi }) =
          id: 'email',
          title: 'Email Extraction',
          desc: 'AI ingestion via designated ID.',
-         detail: 'invoices@3scanalytics.ai',
+         detail: 'invoices@sequelstring.ai',
          icon: Mail,
          color: 'bg-blue-600',
          textColor: 'text-blue-600',
@@ -218,7 +218,7 @@ export const IntegrationHub: React.FC<IntegrationHubProps> = ({ onIngestEdi }) =
                      <div className="space-y-2 mb-6">
                         <div className="flex justify-between text-xs">
                            <span className="text-gray-500">Endpoint:</span>
-                           <span className="font-mono text-gray-700">api.hitachi-energy.sap.com/eccr3</span>
+                           <span className="font-mono text-gray-700">api.confidential.sap.com/eccr3</span>
                         </div>
                         <div className="flex justify-between text-xs">
                            <span className="text-gray-500">Last Sync:</span>
@@ -230,8 +230,8 @@ export const IntegrationHub: React.FC<IntegrationHubProps> = ({ onIngestEdi }) =
                         onClick={handleTestConnection}
                         disabled={sapTestStatus === 'testing'}
                         className={`w-full py-2 text-xs font-bold uppercase rounded-sm border transition-all flex items-center justify-center ${sapTestStatus === 'success'
-                              ? 'bg-green-600 text-white border-green-600'
-                              : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                           ? 'bg-green-600 text-white border-green-600'
+                           : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
                            }`}
                      >
                         {sapTestStatus === 'testing' && <RefreshCw size={14} className="mr-2 animate-spin" />}
@@ -361,14 +361,14 @@ export const IntegrationHub: React.FC<IntegrationHubProps> = ({ onIngestEdi }) =
                      <div>
                         <label className="text-xs font-bold text-gray-400 uppercase mb-1 block">Inbound Webhook URL</label>
                         <div className="flex bg-gray-50 border border-gray-200 rounded-sm p-2">
-                           <span className="text-teal-700 font-mono text-xs truncate flex-1">https://api.3sc-controltower.com/v2/inbound/invoice</span>
+                           <span className="text-teal-700 font-mono text-xs truncate flex-1">https://api.sequelstring.ai/v2/inbound/invoice</span>
                            <Lock size={12} className="text-gray-400 ml-2" />
                         </div>
                      </div>
                      <div className="grid grid-cols-2 gap-4">
                         <div>
                            <label className="text-xs font-bold text-gray-400 uppercase mb-1 block">Client ID</label>
-                           <input type="text" value="HITACHI_PROD_001" disabled className="w-full bg-gray-50 border border-gray-200 rounded-sm p-2 text-xs font-mono text-gray-700" />
+                           <input type="text" value="CONFIDENTIAL_PROD_001" disabled className="w-full bg-gray-50 border border-gray-200 rounded-sm p-2 text-xs font-mono text-gray-700" />
                         </div>
                         <div>
                            <label className="text-xs font-bold text-gray-400 uppercase mb-1 block">Auth Method</label>

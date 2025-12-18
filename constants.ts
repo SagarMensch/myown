@@ -34,21 +34,20 @@ export const INITIAL_ROLES: RoleDefinition[] = [
 export const INITIAL_WORKFLOW: WorkflowStepConfig[] = [
   {
     id: 'step-1',
-    stepName: 'Operational Review',
+    stepName: 'SCM Operations', // Explicit request: SCM Operations (Kaai Bansal)
     roleId: 'OPS_MANAGER',
     conditionType: 'ALWAYS'
   },
   {
     id: 'step-2',
-    stepName: 'High Value Approval',
+    stepName: 'Finance Review', // Explicit request: Finance Review (Zeya Kapoor)
     roleId: 'FINANCE_MANAGER',
-    conditionType: 'AMOUNT_GT',
-    conditionValue: 5000
+    conditionType: 'ALWAYS' // User implied linear flow: "then i will go to wiliiam he will seee everthing"
   },
   {
     id: 'step-3',
-    stepName: 'ERP Settlement',
-    roleId: 'ENTERPRISE_ADMIN', // Changed from 'admin' to match persona
+    stepName: 'ERP Settlement', // Explicit request: ERP Settlement (System Admin)
+    roleId: 'ENTERPRISE_ADMIN',
     conditionType: 'ALWAYS',
     isSystemStep: true
   }
@@ -57,14 +56,14 @@ export const INITIAL_WORKFLOW: WorkflowStepConfig[] = [
 export const KPIS: KPI[] = [
   {
     label: 'TOTAL SPEND (YTD)',
-    value: '$12,910,540',
+    value: '₹12,910,540',
     subtext: 'vs Budget: -2.1%',
     trend: 'down',
     color: 'blue'
   },
   {
     label: 'AUDIT SAVINGS',
-    value: '$90,025',
+    value: '₹90,025',
     subtext: 'From 15 Auto-Rejections',
     trend: 'up',
     color: 'teal'
@@ -87,15 +86,52 @@ export const KPIS: KPI[] = [
 
 export const MOCK_INVOICES: Invoice[] = [
   {
+    id: 'PARCEL-FEDEX-99',
+    invoiceNumber: 'FX-99887766',
+    carrier: 'FedEx',
+    origin: 'Memphis, TN',
+    destination: 'Austin, TX (Acme Inc)',
+    amount: 145.50,
+    currency: 'INR',
+    date: '2025-10-24',
+    dueDate: '2025-11-24',
+    status: InvoiceStatus.PENDING,
+    variance: 145.50, // Potential Refund (Full GSR)
+    reason: 'Parcel Audit Findings',
+    extractionConfidence: 0.99,
+    source: 'EDI',
+    parcelDetails: {
+      serviceType: 'Priority Overnight',
+      trackingNumber: '789456123000',
+      zone: '06',
+      billedWeight: 15.0,
+      actualWeight: 4.5,
+      dimWeight: 15.0,
+      dimFactor: 139,
+      dimensions: '18x12x8',
+      guaranteedDeliveryDate: '2025-10-25T10:30:00',
+      actualDeliveryDate: '2025-10-25T14:45:00', // LATE
+      isResidential: true,
+      signedBy: 'Front Desk'
+    },
+    lineItems: [
+      { description: 'Priority Overnight - Base', amount: 95.00, expectedAmount: 95.00 },
+      { description: 'Fuel Surcharge', amount: 15.50, expectedAmount: 15.50 },
+      { description: 'Residential Surcharge', amount: 5.85, expectedAmount: 0.00 },
+      { description: 'Additional Handling', amount: 29.15, expectedAmount: 0.00 }
+    ],
+    matchResults: { rate: MatchStatus.MATCH, delivery: MatchStatus.MISMATCH, unit: MatchStatus.MATCH }
+  },
+  {
     id: '5467',
     invoiceNumber: '5467',
     carrier: 'Maersk',
     origin: 'Bloomington, IL',
-    destination: 'Brisbane, AU',
+    destination: 'Brisbane, AU', // Export -> 0% Tax
     amount: 2775.00,
-    currency: 'USD',
+    currency: 'INR',
     date: '2025-11-19',
-    dueDate: '2025-12-19',
+    dueDate: '2026-01-25', // Extended for Early Pay Demo
     status: InvoiceStatus.APPROVED,
     variance: 0.00,
     reason: '3-Way Match OK',
@@ -118,6 +154,9 @@ export const MOCK_INVOICES: Invoice[] = [
       delivery: MatchStatus.MATCH,
       unit: MatchStatus.MATCH
     },
+    // TAX: Export = 0
+    taxTotal: 0.00,
+    taxDetails: [{ type: 'Export Zero-Rated', rate: 0.00, amount: 0.00, jurisdiction: 'ROW' }],
     glSegments: [
       { code: '101-20', segment: 'Power Grids', amount: 2775.00, percentage: 100, color: 'bg-blue-500' }
     ],
@@ -136,20 +175,61 @@ export const MOCK_INVOICES: Invoice[] = [
     }
   },
   {
+    id: 'INDIA-GST-001',
+    invoiceNumber: 'DEL-MUM-882',
+    carrier: 'Tci Freight',
+    origin: 'New Delhi, IN',
+    destination: 'Mumbai, IN', // Inter-state -> IGST 18%
+    amount: 1180.00, // 1000 + 180 tax
+    currency: 'INR',
+    date: '2025-12-10',
+    dueDate: '2026-01-10',
+    status: InvoiceStatus.PENDING,
+    variance: 0.00,
+    reason: 'GST Validation Pending',
+    extractionConfidence: 98,
+    workflowHistory: [
+      { stepId: 'step-1', status: 'PENDING' },
+      { stepId: 'step-2', status: 'PENDING' },
+      { stepId: 'step-3', status: 'PENDING' }
+    ],
+    tmsEstimatedAmount: 150000.00,
+    auditAmount: 150000.00,
+    source: 'API',
+    tmsMatchStatus: 'LINKED',
+    sapShipmentRef: 'SHP-IN-99281',
+    // FX Normalization (1 JPY ~ 0.55 INR)
+    baseAmount: 82500.00, // 150000 JPY * 0.55 INR/JPY
+    exchangeRate: 0.55, // Example rate for JPY to INR
+    baseCurrency: 'INR',
+    // Landed Cost Data
+    skuList: [
+      { id: 'SKU-LP-992', name: 'Sony Vaio Pro 14"', quantity: 50, weight: 150, volume: 2.5, value: 50000 },
+      { id: 'SKU-HP-105', name: 'Sony WH-1000XM5', quantity: 200, weight: 80, volume: 1.2, value: 30000 }
+    ],
+    lineItems: [
+      { description: 'Air Freight Consolidation', amount: 150000, expectedAmount: 150000 }
+    ],
+    taxTotal: 0.00, // Assuming no tax for this example
+    taxDetails: [],
+    matchResults: { rate: MatchStatus.MATCH, delivery: MatchStatus.MATCH, unit: MatchStatus.MATCH },
+    glSegments: [{ code: 'IN-101', segment: 'India Ops', amount: 1180.00, percentage: 100, color: 'bg-orange-500' }]
+  },
+  {
     id: '709114',
     invoiceNumber: '709114',
     carrier: 'Chilean Line',
     origin: 'Baltimore, MD',
     destination: 'Santiago, CL',
     amount: 2678.00,
-    currency: 'USD',
+    currency: 'INR',
     date: '2025-11-20',
     dueDate: '2025-12-20',
     status: InvoiceStatus.EXCEPTION,
     variance: 178.00,
     reason: 'Rate Mismatch (>5%)',
     extractionConfidence: 96,
-    assignedTo: 'Lan Banh',
+    assignedTo: 'Kaai Bansal',
     workflowHistory: [
       { stepId: 'step-1', status: 'ACTIVE' },
       { stepId: 'step-2', status: 'PENDING' },
@@ -188,6 +268,7 @@ export const MOCK_INVOICES: Invoice[] = [
     },
     dispute: {
       status: 'OPEN',
+      messages: [],
       history: [
         { actor: 'System', timestamp: '2025-11-20 10:05 AM', action: 'Exception Raised', comment: 'Billed amount $2678.00 exceeds contracted rate $2500.00 by $178.00.' }
       ]
@@ -200,24 +281,25 @@ export const MOCK_INVOICES: Invoice[] = [
     origin: 'JFK Airport',
     destination: 'Raleigh Hub',
     amount: 12500.00,
-    currency: 'USD',
+    currency: 'INR',
     date: '2025-11-26',
     dueDate: '2025-12-26',
-    status: InvoiceStatus.EXCEPTION,
+    status: InvoiceStatus.APPROVED, // Changed to Approved because Spot Quote matches!
     variance: 0.00,
-    reason: 'Ghost Shipment (No TMS Link)',
+    reason: 'Verified against Spot Quote #EXP-SPOT-55',
     extractionConfidence: 88,
     assignedTo: 'Logistics Mgr',
     workflowHistory: [
-      { stepId: 'step-1', status: 'ACTIVE' },
-      { stepId: 'step-2', status: 'PENDING' },
-      { stepId: 'step-3', status: 'PENDING' }
+      { stepId: 'step-1', status: 'APPROVED', approverName: 'System', comment: 'Matched via Spot Quote Engine' },
+      { stepId: 'step-2', status: 'SKIPPED' },
+      { stepId: 'step-3', status: 'APPROVED' }
     ],
     tmsEstimatedAmount: undefined,
     auditAmount: 12500.00,
     source: 'EMAIL',
     tmsMatchStatus: 'NOT_FOUND',
     sapShipmentRef: undefined,
+    spotQuoteRef: 'EXP-SPOT-55',
     lineItems: [
       { description: 'Air Charter - Urgent Parts', amount: 12500.00, expectedAmount: 12500.00 }
     ],
@@ -244,6 +326,7 @@ export const MOCK_INVOICES: Invoice[] = [
     },
     dispute: {
       status: 'OPEN',
+      messages: [],
       history: [
         { actor: 'System', timestamp: '2025-11-26 09:00 AM', action: 'Exception Raised', comment: 'Invoice received via email has no corresponding shipment in TMS. Manual verification required.' }
       ]
@@ -256,7 +339,7 @@ export const MOCK_INVOICES: Invoice[] = [
     origin: 'Zone 1 (East)',
     destination: 'Zone 4 (Midwest)',
     amount: 450.00,
-    currency: 'USD',
+    currency: 'INR',
     date: '2025-11-21',
     dueDate: '2025-12-21',
     status: InvoiceStatus.APPROVED,
@@ -305,7 +388,7 @@ export const MOCK_INVOICES: Invoice[] = [
     origin: 'Zone 1 (East)',
     destination: 'Zone 4 (Midwest)',
     amount: 450.00,
-    currency: 'USD',
+    currency: 'INR',
     date: '2025-11-25',
     dueDate: '2025-12-25',
     status: InvoiceStatus.EXCEPTION,
@@ -333,6 +416,7 @@ export const MOCK_INVOICES: Invoice[] = [
     },
     dispute: {
       status: 'OPEN',
+      messages: [],
       history: [
         { actor: 'System', timestamp: '2025-11-25 11:00 AM', action: 'Exception Raised', comment: 'Invoice is a 95% match to existing invoice #LTL-992. Please verify this is not a duplicate.' }
       ]
@@ -345,7 +429,7 @@ export const MOCK_INVOICES: Invoice[] = [
     origin: 'Hamburg, DE',
     destination: 'Newark, NJ',
     amount: 4200.00,
-    currency: 'USD',
+    currency: 'INR',
     date: '2025-10-15',
     dueDate: '2025-11-15',
     status: InvoiceStatus.PAID,
@@ -382,7 +466,7 @@ export const MOCK_INVOICES: Invoice[] = [
     origin: 'Shanghai, CN',
     destination: 'Los Angeles, CA',
     amount: 3500.00,
-    currency: 'USD',
+    currency: 'INR',
     date: '2025-11-18',
     dueDate: '2025-12-18',
     status: InvoiceStatus.REJECTED,
@@ -407,7 +491,7 @@ export const MOCK_INVOICES: Invoice[] = [
     origin: 'London, UK',
     destination: 'New York, NY',
     amount: 1250.50,
-    currency: 'USD',
+    currency: 'INR',
     date: '2025-12-01',
     dueDate: '2025-12-31',
     status: InvoiceStatus.PENDING,
@@ -443,14 +527,14 @@ export const MOCK_INVOICES: Invoice[] = [
     origin: 'Berlin, DE',
     destination: 'Chicago, IL',
     amount: 5600.00,
-    currency: 'USD',
+    currency: 'INR',
     date: '2025-12-02',
     dueDate: '2026-01-02',
     status: InvoiceStatus.EXCEPTION,
     variance: 450.00,
     reason: 'Unexpected Accessorials',
     extractionConfidence: 94,
-    assignedTo: 'William Carswell',
+    assignedTo: 'Zeya Kapoor',
     workflowHistory: [
       { stepId: 'step-1', status: 'ACTIVE' },
       { stepId: 'step-2', status: 'PENDING' },
@@ -475,6 +559,7 @@ export const MOCK_INVOICES: Invoice[] = [
     ],
     dispute: {
       status: 'OPEN',
+      messages: [],
       history: [
         { actor: 'System', timestamp: '2025-12-02 09:30 AM', action: 'Exception Raised', comment: 'Unplanned accessorial charge detected.' }
       ]
@@ -487,7 +572,7 @@ export const MOCK_INVOICES: Invoice[] = [
     origin: 'Memphis, TN',
     destination: 'Atlanta, GA',
     amount: 320.00,
-    currency: 'USD',
+    currency: 'INR',
     date: '2025-12-03',
     dueDate: '2026-01-03',
     status: InvoiceStatus.APPROVED,
@@ -523,14 +608,14 @@ export const MOCK_INVOICES: Invoice[] = [
     origin: 'Laredo, TX',
     destination: 'Detroit, MI',
     amount: 1850.00,
-    currency: 'USD',
+    currency: 'INR',
     date: '2025-12-04',
     dueDate: '2026-01-04',
     status: InvoiceStatus.VENDOR_RESPONDED,
     variance: 150.00,
     reason: 'Detention Dispute',
     extractionConfidence: 97,
-    assignedTo: 'Lan Banh',
+    assignedTo: 'Kaai Bansal',
     workflowHistory: [
       { stepId: 'step-1', status: 'ACTIVE' },
       { stepId: 'step-2', status: 'PENDING' },
@@ -555,6 +640,7 @@ export const MOCK_INVOICES: Invoice[] = [
     ],
     dispute: {
       status: 'VENDOR_RESPONDED',
+      messages: [],
       history: [
         { actor: 'System', timestamp: '2025-12-04 10:00 AM', action: 'Exception Raised', comment: 'Detention charges not pre-approved.' },
         { actor: 'Vendor', timestamp: '2025-12-04 02:00 PM', action: 'Justification Submitted', comment: 'Driver was held at dock for 3 hours. POD attached.' }
@@ -572,7 +658,7 @@ export const MOCK_RATES: RateCard[] = [
     destination: 'Brisbane, AU',
     containerType: "20' Standard",
     rate: 2775.00,
-    currency: 'USD',
+    currency: 'INR',
     status: 'ACTIVE',
     validFrom: '2025-01-01',
     validTo: '2026-12-31'
@@ -585,7 +671,7 @@ export const MOCK_RATES: RateCard[] = [
     destination: 'Charleston, SC',
     containerType: "40' High Cube",
     rate: 4500.00,
-    currency: 'USD',
+    currency: 'INR',
     status: 'ACTIVE',
     validFrom: '2025-02-01',
     validTo: '2026-02-01'
@@ -637,8 +723,8 @@ export const MOCK_BATCHES: PaymentBatch[] = [
     id: 'PY-2025-11-24-001',
     runDate: '2025-11-24',
     entity: 'Hitachi Energy USA',
-    bankAccount: 'JPM-8829 (USD)',
-    currency: 'USD',
+    bankAccount: 'HDFC-8829 (INR)',
+    currency: 'INR',
     amount: 7425.00,
     invoiceCount: 3,
     discountAvailable: 125.00,
@@ -653,12 +739,12 @@ export const MOCK_BATCHES: PaymentBatch[] = [
     runDate: '2025-11-25',
     entity: 'Hitachi Energy Canada',
     bankAccount: 'RBC-9921 (CAD)',
-    currency: 'USD', // For demo simplicity
+    currency: 'INR', // For demo simplicity
     amount: 2678.00,
     invoiceCount: 1,
     status: 'AWAITING_APPROVAL',
     riskScore: 'LOW',
-    nextApprover: 'William Carswell',
+    nextApprover: 'Zeya Kapoor',
     invoiceIds: ['709114'],
     paymentTerms: 'Net 45',
     sanctionStatus: 'PASSED'
@@ -668,7 +754,7 @@ export const MOCK_BATCHES: PaymentBatch[] = [
     runDate: '2025-11-25',
     entity: 'Hitachi Energy EU',
     bankAccount: 'DB-1120 (EUR)',
-    currency: 'USD', // For demo simplicity
+    currency: 'INR', // For demo simplicity
     amount: 12950.00,
     invoiceCount: 2,
     status: 'DRAFT',

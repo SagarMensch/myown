@@ -220,7 +220,7 @@ export const InvoiceIngestion: React.FC<IngestionProps> = ({ onBack, onSubmit, u
               <UploadCloud size={40} />
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-teal-700">Click to Browse or Drag File Here</h3>
-            <p className="text-sm text-gray-400">Securely encrypted upload to 3SC Control Tower</p>
+            <p className="text-sm text-gray-400">Securely encrypted upload to SequelString AI Control Tower</p>
           </div>
 
           <div className="mt-8 flex justify-center space-x-8 text-xs text-gray-400 font-bold uppercase tracking-wider">
@@ -503,7 +503,7 @@ export const InvoiceIngestion: React.FC<IngestionProps> = ({ onBack, onSubmit, u
               <Database size={40} />
             </div>
             <h3 className="text-2xl font-bold text-gray-800 mb-2">Submission Complete</h3>
-            <p className="text-gray-500 mb-4">Invoice has been sent to 3SC for Audit.</p>
+            <p className="text-gray-500 mb-4">Invoice has been sent to SequelString AI for Audit.</p>
             <p className="text-xs text-gray-400 font-mono">Redirecting...</p>
           </div>
         </div>

@@ -14,7 +14,11 @@ import {
   Settings,
   Calculator,
   Award,
-  AlertOctagon
+  AlertOctagon,
+  FileText,
+  Gavel,
+  ScanEye,
+  BarChart2,
 } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -32,7 +36,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userR
     { id: 'cockpit', label: 'Control Tower', icon: LayoutDashboard, roles: ['3SC'] },
     { id: 'vendor_portal', label: 'Supplier Home', icon: LayoutDashboard, roles: ['VENDOR'] },
 
-    { id: 'rates', label: 'Contracts & Rates', icon: ScrollText, roles: ['3SC'] },
+    { id: 'contracts', label: 'Contract Master', icon: FileText, roles: ['3SC'] },
+    { id: 'spot_market', label: 'Spot Auction', icon: Gavel, roles: ['3SC'] },
+    { id: 'scorecard', label: 'The Blackbook', icon: BarChart2, roles: ['3SC'] },
+    { id: 'rates', label: 'Legacy Rates', icon: ScrollText, roles: ['3SC'] },
     { id: 'network', label: 'Carrier Master', icon: Truck, roles: ['3SC'] },
 
     { id: 'ingestion', label: 'Upload Invoice', icon: UploadCloud, roles: ['VENDOR'] },
@@ -65,18 +72,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userR
   const isVendor = userRole === 'VENDOR';
 
   return (
-    <div className="w-64 bg-slate-900/95 backdrop-blur-xl border-r border-slate-700/50 flex flex-col h-screen fixed left-0 top-0 z-50 font-sans shadow-2xl">
+    <div className="w-64 bg-[#161616] border-r border-gray-800 flex flex-col h-screen fixed left-0 top-0 z-50 font-sans shadow-2xl">
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-700/50 bg-slate-900/50">
+      <div className="h-16 flex items-center px-6 border-b border-gray-800 bg-[#161616]">
         {isVendor ? (
           <div>
             <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 tracking-tight">PARTNER PORTAL</h1>
-            <p className="text-[10px] uppercase text-slate-400 font-semibold tracking-widest">Maersk Line</p>
+            <p className="text-[10px] uppercase text-gray-400 font-semibold tracking-widest">Maersk Line</p>
           </div>
         ) : (
-          <div>
-            <h1 className="text-lg font-extrabold text-slate-100 tracking-tight whitespace-nowrap">3SC CONTROL TOWER</h1>
-            <p className="text-[10px] uppercase text-blue-400 font-bold tracking-widest">System Admin</p>
+          <div className="flex flex-col justify-center">
+            <h1 className="text-sm font-bold text-gray-100 tracking-tight leading-tight font-['Inter']">SEQUELSTRING AI</h1>
+            <p className="text-[10px] uppercase text-[#0F62FE] font-bold tracking-widest mt-1 font-['Inter']">CONTROL TOWER</p>
           </div>
         )}
       </div>
@@ -90,31 +97,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userR
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 group
+              className={`w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-sm transition-all duration-200 group
                 ${isActive
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20 translate-x-1'
-                  : 'text-slate-400 hover:bg-slate-800/50 hover:text-white hover:translate-x-1'
+                  ? 'bg-[#0F62FE] text-white shadow-md'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                 }`}
             >
-              <Icon size={18} className={`${isActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'} transition-colors duration-200`} />
+              <Icon size={18} className={`${isActive ? 'text-white' : 'text-gray-500 group-hover:text-[#0F62FE]'} transition-colors duration-200`} />
               <span>{item.label}</span>
-              {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-sm animate-pulse" />}
+              {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/20" />}
             </button>
           );
         })}
       </nav>
 
       {/* User Footer */}
-      <div className="p-4 bg-slate-900/80 border-t border-slate-700/50 backdrop-blur-sm">
-        <div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-800/50 transition-colors cursor-pointer border border-transparent hover:border-slate-700">
-          <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm text-white shadow-lg ${activePersona?.color === 'teal' ? 'bg-gradient-to-br from-teal-500 to-emerald-600' : activePersona?.color === 'blue' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-purple-500 to-pink-600'}`}>
+      <div className="p-4 bg-[#161616] border-t border-gray-800">
+        <div className="flex items-center space-x-3 p-2 rounded-sm hover:bg-gray-800 transition-colors cursor-pointer border border-transparent hover:border-gray-700">
+          <div className={`w-9 h-9 rounded-sm flex items-center justify-center font-bold text-sm text-white shadow-sm ${activePersona?.color === 'teal' ? 'bg-[#0F62FE]' : activePersona?.color === 'blue' ? 'bg-[#0F62FE]' : 'bg-gray-700'}`}>
             {userRole === 'VENDOR' ? 'VN' : activePersona?.initials || 'AD'}
           </div>
           <div className="overflow-hidden">
-            <p className="text-xs font-bold text-slate-200 truncate group-hover:text-white transition-colors">
+            <p className="text-xs font-bold text-gray-200 truncate group-hover:text-white transition-colors">
               {userRole === 'VENDOR' ? 'Vendor User' : activePersona?.name || 'System Admin'}
             </p>
-            <p className="text-[10px] text-slate-500 truncate">
+            <p className="text-[10px] text-gray-500 truncate">
               {userRole === 'VENDOR' ? 'Finance Rep' : activePersona?.role || 'Super User'}
             </p>
           </div>
