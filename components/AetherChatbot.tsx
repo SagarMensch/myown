@@ -14,8 +14,8 @@ interface Message {
     actionResult?: string;
 }
 
-import { generateAIResponse } from '../services/aiService';
-import { MOCK_INVOICES, SPEND_DATA, KPIS, MOCK_RATES, MOCK_BATCHES } from '../constants';
+import { generateOllamaResponse } from '../services/ollamaService';
+import { MOCK_INVOICES, SPEND_DATA, KPIS, MOCK_RATES, MOCK_PARTNERS, MOCK_BATCHES } from '../constants';
 import { InvoiceStatus } from '../types';
 
 interface AetherChatbotProps {
@@ -29,6 +29,7 @@ export const AetherChatbot: React.FC<AetherChatbotProps> = ({ onAction }) => {
     ]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [useOllama, setUseOllama] = useState(true); // Default to trying Ollama
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -41,6 +42,68 @@ export const AetherChatbot: React.FC<AetherChatbotProps> = ({ onAction }) => {
 
     const processLocalIntent = (input: string): Message | null => {
         const lowerInput = input.toLowerCase();
+
+        // --- CONTEXTUAL CHARTS ---
+
+        // 1. CARRIER GRAPH / PARTNER GRAPH
+        if (lowerInput.includes('carrier') && (lowerInput.includes('graph') || lowerInput.includes('chart') || lowerInput.includes('count'))) {
+            const carrierData = [
+                { name: 'Ocean', value: MOCK_PARTNERS.filter(p => p.mode === 'Ocean').length * 10 }, // Speculative scaling for demo
+                { name: 'Road', value: MOCK_PARTNERS.filter(p => p.mode.includes('Road')).length * 15 },
+                { name: 'Air', value: 5 }
+            ];
+            return {
+                id: Date.now().toString(),
+                text: "Generating Engineering Schematic: **Carrier Network Density**.",
+                sender: 'ai',
+                timestamp: new Date(),
+                chartType: 'bar',
+                chartTitle: 'CARRIER COUNT BY MODE',
+                chartData: carrierData
+            };
+        }
+
+        // 2. SPEND GRAPH / TREND
+        if (lowerInput.includes('spend') && (lowerInput.includes('graph') || lowerInput.includes('chart') || lowerInput.includes('trend'))) {
+            const trendData = [
+                { name: 'JAN', value: 45000 },
+                { name: 'FEB', value: 52000 },
+                { name: 'MAR', value: 48000 },
+                { name: 'APR', value: 61000 },
+                { name: 'MAY', value: 55000 },
+                { name: 'JUN', value: 67000 },
+            ];
+            return {
+                id: Date.now().toString(),
+                text: "Generating Engineering Schematic: **6-Month Spend Trend**.",
+                sender: 'ai',
+                timestamp: new Date(),
+                chartType: 'bar', // Using Bar for technical look, could be Line
+                chartTitle: 'SPEND VELOCITY (K)',
+                chartData: trendData
+            };
+        }
+
+        // 3. INVOICE STATUS GRAPH
+        if (lowerInput.includes('invoice') && (lowerInput.includes('graph') || lowerInput.includes('chart') || lowerInput.includes('status'))) {
+            const statusData = [
+                { name: 'PEND', value: MOCK_INVOICES.filter(i => i.status === 'PENDING').length },
+                { name: 'APPR', value: MOCK_INVOICES.filter(i => i.status === 'APPROVED').length },
+                { name: 'PAID', value: MOCK_INVOICES.filter(i => i.status === 'PAID').length },
+                { name: 'EXCP', value: MOCK_INVOICES.filter(i => i.status === 'EXCEPTION').length }
+            ];
+            return {
+                id: Date.now().toString(),
+                text: "Generating Engineering Schematic: **Invoice Workflow Status**.",
+                sender: 'ai',
+                timestamp: new Date(),
+                chartType: 'bar',
+                chartTitle: 'INVOICE VOLUME BY STATUS',
+                chartData: statusData
+            };
+        }
+
+        // --- STANDARD INTENTS (Prioritized if no graph requested) ---
 
         // 1. PENDING INVOICES
         if (lowerInput.includes('pending') || (lowerInput.includes('how many') && lowerInput.includes('invoice'))) {
@@ -135,29 +198,6 @@ export const AetherChatbot: React.FC<AetherChatbotProps> = ({ onAction }) => {
             };
         }
 
-        // 7. SHOW GRAPH / PLOT
-        if (lowerInput.includes('graph') || lowerInput.includes('chart') || lowerInput.includes('plot')) {
-            // Mock Trend Data
-            const trendData = [
-                { name: 'JAN', value: 45000 },
-                { name: 'FEB', value: 52000 },
-                { name: 'MAR', value: 48000 },
-                { name: 'APR', value: 61000 },
-                { name: 'MAY', value: 55000 },
-                { name: 'JUN', value: 67000 },
-            ];
-
-            return {
-                id: Date.now().toString(),
-                text: "Generating Engineering Schematic: **6-Month Spend Trend**.",
-                sender: 'ai',
-                timestamp: new Date(),
-                chartType: 'bar',
-                chartTitle: 'SPEND VELOCITY (K)',
-                chartData: trendData
-            };
-        }
-
         return null;
     };
 
@@ -175,10 +215,11 @@ export const AetherChatbot: React.FC<AetherChatbotProps> = ({ onAction }) => {
         setInputValue('');
         setIsLoading(true);
 
-        // DELAY SIMULATION FOR REALISM
+        // DELAY SIMULATION FOR REALISM OR OLLAMA LATENCY
         setTimeout(async () => {
             try {
-                // 1. TRY LOCAL INTELLIGENCE FIRST
+                // 1. TRY LOCAL INTELLIGENCE (Charts & Specific Lookups) FIRST
+                // This ensures charts are always generated by our React code, which LLM can't do easily.
                 const localResponse = processLocalIntent(newUserMessage.text);
 
                 if (localResponse) {
@@ -187,11 +228,26 @@ export const AetherChatbot: React.FC<AetherChatbotProps> = ({ onAction }) => {
                     return;
                 }
 
-                // 2. FALLBACK TO MOCK AI (If no local match)
-                // In a real app, this would call the API. For this demo, we provide a generic safe response.
+                // 2. TRY OLLAMA (Real LLM)
+                if (useOllama) {
+                    const ollamaText = await generateOllamaResponse(newUserMessage.text);
+                    if (ollamaText) {
+                        const ollamaResponse: Message = {
+                            id: (Date.now() + 1).toString(),
+                            text: ollamaText, // Real AI text
+                            sender: 'ai',
+                            timestamp: new Date()
+                        };
+                        setMessages(prev => [...prev, ollamaResponse]);
+                        setIsLoading(false);
+                        return;
+                    }
+                }
+
+                // 3. FALLBACK TO MOCK AI (If Ollama fails or is off)
                 const genericResponse: Message = {
                     id: (Date.now() + 1).toString(),
-                    text: "I am analyzing that specific data point. Please refine your query to 'Pending Invoices', 'Total Spend', or 'Platform Overview' for precise real-time analytics.",
+                    text: "I am analyzing that specific data point. Please refine your query to 'Pending Invoices', 'Total Spend', or 'Platform Overview' for precise real-time analytics.\n\n(Ollama connection unavailable).",
                     sender: 'ai',
                     timestamp: new Date()
                 };
@@ -202,7 +258,7 @@ export const AetherChatbot: React.FC<AetherChatbotProps> = ({ onAction }) => {
             } finally {
                 setIsLoading(false);
             }
-        }, 800);
+        }, 500);
     };
 
     return (
